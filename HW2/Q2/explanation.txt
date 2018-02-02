@@ -1,0 +1,1 @@
+A linear scale based on the degree of node is used, and higher degrees correspond to larger radii. This scale is selected as all of the degrees are nearly in the same magnitude and their difference is not large.

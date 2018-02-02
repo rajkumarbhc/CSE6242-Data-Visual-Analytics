@@ -1,0 +1,3 @@
+A. The combination of plasma glucose and insulin is better. In the corresponding figure, data points showing different classes are roughly more separated with blue circles concentrated in the lower levels of plasma glucose. In the other figure, however, both of them form a cluster in nearly the same area.
+
+B. We may need to use square root scale or log scale when data values grow rapidly. The log scale may be preferred in the case of exponential growth, while the square root scale can be used for less rapid growth (e.g. polynomial).

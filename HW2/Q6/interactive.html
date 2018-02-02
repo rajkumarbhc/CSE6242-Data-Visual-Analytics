@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>szhang444</title>
+        <script type="text/javascript" src="../lib/d3.v3.min.js"></script>
+        <script type="text/javascript" src="../lib/d3.tip.v0.6.3.js"></script>
+        <style>
+            .axis path,
+
+            .axis line {
+                fill: none;
+                stroke: black;
+                shape-rendering: auto; }
+
+            .axis text {
+                font-family: sans-serif;
+                font-size: 14px; }
+
+            path { 
+                stroke: steelblue;
+                stroke-width: 2;
+                fill: none;}
+
+            .bar {
+                fill: steelblue;
+                fill-opacity: .9;}
+
+            .bar:hover {
+                fill: brown;}
+
+            .d3tooltip {
+                font-weight: bold;
+                padding: 12px;
+                background: wheat;
+                color: #fff;
+                border-radius: 2px;}
+        </style>
+    </head>
+    <body>
+        <div id="svgid"></div>
+        <script type='text/javascript'>
+            var data = [{club:'Manchester United',value:{year_2013:3165, year_2014:2810,
+                            year_2015:3100, year_2016:3317, year_2017:4583}},
+                        {club:'Chelsea',value:{year_2013:901, year_2014:868, year_2015:1370, year_2016:1661, year_2017:1845}},
+                        {club:'Manchester City',value:{year_2013:689, year_2014:863, year_2015:1380, year_2016:1921, year_2017:2083}},
+                        {club:'Liverpool',value:{year_2013:651, year_2014:704, year_2015:982, year_2016:1548, year_2017:1492}},
+                        {club:'Arsenal',value:{year_2013:1326, year_2014:1331, year_2015:1310, year_2016:2017, year_2017:1932}}];
+            
+            var total_values = [];
+
+            for (var i = 0; i < data.length; i++){
+                var val = data[i].value,
+                    totalV = [val.year_2013, val.year_2014, val.year_2015, 
+                              val.year_2016, val.year_2017];
+                total_values.push([data[i].club, d3.sum(totalV), totalV]);
+            };
+
+            var margin = { top: 50, right: 250, bottom: 50, left: 150 },
+                width = 960 - margin.left - margin.right,
+                height = 500 - margin.top - margin.bottom,
+                barHight = height / 10,
+                barPadding = height / 5 - barHight;
+
+            var svg = d3.select("#svgid")
+                        .append("svg")
+                        .attr("width", width + margin.left + margin.right)
+                        .attr("height", height + margin.top + margin.bottom)
+                        .append("g")
+                        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+            var tip = d3.tip()
+                        .attr('class', 'd3tooltip')
+                        .attr('id', 'tipid')
+                        .offset([-1.5*barHight, 400])
+                        .html("<div id='tipDiv'></div>");
+
+            svg.call(tip);
+
+            var fragment = document.createDocumentFragment();
+            fragment.appendChild(document.getElementById('tipid'));
+            document.getElementById('svgid').appendChild(fragment);
+
+            var clubLabels = svg.selectAll(".clubLabel")
+                        .data(total_values)
+                        .enter()
+                        .append("text")
+                        .text(function (d) { return d[0]; })
+                        .attr("x", 0)
+                        .attr("y", function (d, i) {
+                                        return margin.top + i * (barHight + barPadding); })
+                        .style("text-anchor", "end")
+                        .attr("transform", "translate(-10," + barHight / 1.75 + ")");
+
+            var barscale = d3.scale.linear()
+                             .domain([0, d3.max(total_values, function(d) { return d[1]; })])
+                             .range([0, width]);
+
+            var linechart = function(xvals, yvals) {
+                var dataset = [];
+                for (var i = 0; i < xvals.length; i++) {
+                    dataset.push([xvals[i], yvals[i]]); };
+
+                var width = 300, height = 200, padding = 35;
+                var xscale = d3.scale.linear()
+                                     .domain([d3.min(xvals), d3.max(xvals)])
+                                     .range([padding * 2, width - padding]),
+                    yscale = d3.scale.linear()
+                                     .domain([d3.min(yvals), d3.max(yvals)])
+                                     .range([height - padding, padding]);
+
+                var valueline = d3.svg.line()
+                             .x(function(d) { return xscale(d[0]); })
+                             .y(function(d) { return yscale(d[1]); });
+
+                var svg = d3.select("#tipDiv")
+                            .append("svg")
+                            .attr("width", width)
+                            .attr("height", height);
+
+                svg.append("path")
+                    .attr("class", "line")
+                    .attr("d", valueline(dataset));
+
+                var xAxis = d3.svg.axis()
+                              .scale(xscale)
+                              .orient('bottom')
+                              .tickFormat(d3.format("d"))
+                              .ticks(5);
+
+                svg.append('g')
+                     .attr('class', 'x axis')
+                     .attr('transform', 'translate(0,' + (height - padding) + ')')
+                     .call(xAxis);
+
+                var yAxis = d3.svg.axis()
+                              .scale(yscale)
+                              .orient('left')
+                              .tickFormat(d3.format("d"))
+                              .ticks(5);
+
+                svg.append('g')
+                     .attr('class', 'y axis')
+                     .attr('transform', 'translate(' + padding * 2 + ',0)')
+                     .call(yAxis);
+
+                svg.append('text')
+                     .attr('x', (width + padding) / 2)
+                     .attr('y', height)
+                     .attr('text-anchor', 'middle')  
+                     .style('font-size', '16px') 
+                     .text('Year');
+                svg.append('text')
+                     .attr('x', padding * 1.2)
+                     .attr('y', padding / 2)
+                     .attr('text-anchor', 'middle')  
+                     .style('font-size', '16px') 
+                     .text('Value');
+                };
+
+            var bar = svg.selectAll(".bar")
+                         .data(total_values)
+                         .enter()
+                         .append("rect")
+                         .attr("class", "bar")
+                         .attr("x", 0)
+                         .attr("y", function(d, i) { 
+                                    return margin.top + i * (barHight + barPadding); })
+                         .attr("height", barHight)
+                         .attr("width", function(d) { return barscale(d[1]); })
+                         .on('mouseover', function(d) {
+                            tip.show()
+                               .attr("position", "absolute")
+                               .style("top", "16px")
+                               .style("left","860px");
+                            linechart(d3.range(2013, 2018), d[2]);
+                         })
+                         .on('mouseout', tip.hide);
+
+            var valueLabels = svg.selectAll(".valueLabel")
+                        .data(total_values)
+                        .enter()
+                        .append("text")
+                        .text(function (d) { return "$" + d[1]; })
+                        .attr("x", 20)
+                        .attr("y", function (d, i) {
+                                        return margin.top + i * (barHight + barPadding); })
+                        .style("text-anchor", "begin")
+                        .style("font-weight", "bold")
+                        .attr("transform", "translate(-10," + barHight / 1.6 + ")");
+        </script>
+    </body>
+</html>

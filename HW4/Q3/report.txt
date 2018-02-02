@@ -1,0 +1,101 @@
+Section A
+    1. RandomForest
+        -P 100 -I 100 -num-slots 1 -K 0 -M 1.0 -V 0.001 -S 1
+
+        Time taken to build model: 0.25 seconds
+
+        Correctly Classified Instances  566     86.6769 %
+
+        === Confusion Matrix ===
+           a   b   <-- classified as
+         316  41 |   a = 0
+          46 250 |   b = 1
+
+    2. Logistic
+        -R 1.0E-8 -M -1 -num-decimal-places 4
+
+        Time taken to build model: 0.19 seconds
+
+        Correctly Classified Instances  564     86.3706 %
+
+        === Confusion Matrix ===
+           a   b   <-- classified as
+         302  55 |   a = 0
+          34 262 |   b = 1
+
+    3. MultilayerPerceptron
+        -L 0.3 -M 0.2 -N 500 -V 0 -S 0 -E 20 -H a
+
+        Time taken to build model: 19.82 seconds
+
+        Correctly Classified Instances  544     83.3078 %
+
+        === Confusion Matrix ===
+           a   b   <-- classified as
+         298  59 |   a = 0
+          50 246 |   b = 1
+
+    4. SGD, Loss function: Hinge loss (SVM)
+        -F 0 -L 0.01 -R 1.0E-4 -E 500 -C 0.001 -S 1
+
+        Time taken to build model: 0.14 seconds
+
+        Correctly Classified Instances  561     85.9112 %
+
+        === Confusion Matrix ===
+           a   b   <-- classified as
+         286  71 |   a = 0
+          21 275 |   b = 1
+
+    5. IterativeClassifierOptimizer
+        -W weka.classifiers.meta.LogitBoost -L 50 -P 1 -E 1 -I 1 -F 10 -R 1 -metric RMSE -S 1 -- -P 100 -L -1.7976931348623157E308 -H 1.0 -Z 3.0 -O 1 -E 1 -S 1 -I 10 -W weka.classifiers.trees.DecisionStump
+
+        Time taken to build model: 0.35 seconds
+
+        Correctly Classified Instances  562     86.0643 %
+
+        === Confusion Matrix ===
+           a   b   <-- classified as
+         311  46 |   a = 0
+          45 251 |   b = 1
+
+
+Section B
+    1a. RandomForest
+        I modified numExecutionSlots (from 1 to 5);
+
+        Runtime decreased by 52% (from 0.25s to 0.12s);
+
+        Reason: More execution slots (threads) were used to construct the ensemble, which may take advantage of the computing resources that were unused by a single thread. This has no impact on the prediction accuracy.
+
+    1b. Logistic
+        I modified maxIts (from -1 to 10);
+
+        Runtime decreased by 74% (from 0.19s to 0.05s), predication accuracy decreases from 86.3706% to 84.2266%;
+
+        Reason: Fewer iterations were performed, which required less time for execution. The results may not fully converged after 10 iterations, thus resulting in a lower prediction accuracy.
+
+    1c. MultilayerPerceptron
+        I modified momentum (from 0.2 to 0.4);
+
+        Runtime and predication accuracy were comparable to the original ones (~19.8s; 83.3078% vs. 83.1547%);
+
+        Reason: Momentum might mainly affect how fast the network was trained and a small change might not significantly change the trained network and its prediction performance in this case.
+        
+    1d. SVM
+        I modified epochs (from 500 to 1000);
+
+        Runtime increased by 121% (from 0.14s to 0.31s), predication accuracy increases from 85.9112% to 86.3706%;
+
+        Reason: The total number of iterations increased by using more epochs, thus requiring more execution time. Results further converged with more iterations, leading to a higher accuracy.
+
+    1e. IterativeClassifierOptimizer
+        I modified lookAheadIterations (from 50 to 2);
+
+        Runtime was similar to the original one (~0.35s); predication accuracy decreases from 86.0643% to 85.7580%;
+
+        Reason: The number of look-ahead iterations was decreased to a value that is too low to find the same optimum as the one found by more iterations.
+
+    2. The prediction accuracy of my implementation was 85.60%, compared to Weka’s 86.6769%. It was because Weka used more base learners (i.e., 100 random trees by default) than that in my implementation (i.e., 15), which resulted in a more accurate model.
+
+    3. In terms of the running time and prediction accuracy, the best performing approach was RandomForest, because it achieved the highest prediction accuracy (i.e., 86.6769%) among the five classifiers, while only a small running time (~0.12s) is required. The performance of Logistic was comparable to RandomForest in terms of the running time, but the prediction accuracy was lower. For the other three classifiers, each of them achieved a lower prediction accuracy while more running time was required.

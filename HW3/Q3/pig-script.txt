@@ -1,0 +1,11 @@
+bigrams = LOAD 's3://cse6242-2017fall-aws-big/*' AS (bigram:chararray, year:int, occurrences:double, books:double);
+
+X1 = FILTER bigrams BY (occurrences >= 200.0) AND (books >= 10.0);
+
+X2 = GROUP X1 BY bigram;
+X3 = FOREACH X2 GENERATE group AS gram, SUM(X1.occurrences)/SUM(X1.books) AS ratio;
+
+X4 = ORDER X3 BY ratio DESC, gram ASC;
+X5 = LIMIT X4 10;
+
+STORE X5 INTO 's3://cse6242-szhang444/output-big' USING PigStorage ('\t');

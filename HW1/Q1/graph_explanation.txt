@@ -1,0 +1,4 @@
+Node color is selected based on the Betweenness Centrality of node;
+Node size is determined by the degree of node; size ranges from 25 to 60;
+Edge color is the same to the source node color;
+Node labels are only shown for those with the Betweenness Centrality larger than 0.

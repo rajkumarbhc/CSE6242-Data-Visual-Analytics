@@ -1,0 +1,20 @@
+c(i):
+    propertyzoningdesc: 910
+
+c(ii):
+    value.toDate('yy-MM-dd').toString('EEEE, MMMM dd, yyyy')
+
+c(iii):
+    Column only containing nominal data: parcelid
+    Column only containing ordinal data: buildingqualitytypeid
+
+c(iv):
+    not(toNumber(value)<=3)
+
+c(v):
+    value.replace("*", "")
+
+c(vi):
+    Feature: Duplicates Facet.
+    Such feature will be useful when we need to find duplicate items within a column before proceding with further actions, such as removing all other duplicates but only keeping the up-to-date one.
+    

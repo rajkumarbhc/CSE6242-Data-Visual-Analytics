@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>szhang444</title>
+        <script type="text/javascript" src="../lib/d3.v3.min.js"></script>
+        <style>
+            rect.border {
+                stroke: #d9d9d9;
+                stroke-width:2px;}
+
+            text.legend {
+                font-size: 14px;}
+
+            text.axislabel {
+                font-size: 16px;
+                font-weight: bold;}
+
+            .title {
+                position: relative;
+                left: 200px;
+                font-size: 20px;
+                font-weight: bold}
+
+            .mysvg {
+                position: relative;
+                top: 10px;
+                left: 0px;}
+
+            #selectbox {
+                position: relative;
+                top: 10px;
+                left: 300px;}
+        </style>
+    </head>
+    <body>
+        <div class="title">A Visualization of Game of Thrones</div>
+        <div id="selectbox">Season </div>
+        <div id="chart"></div>
+        <script type="text/javascript">
+            var margin = { top: 25, right: 50, bottom: 10, left: 100 },
+                width = 800 - margin.left - margin.right,
+                height = 500 - margin.top - margin.bottom,
+                gridSize = height / 9,
+                colors = ["#ffffd9", "#edf8b1", "#c7e9b4", "#7fcdbb", "#41b6c4", "#1d91c0", "#225ea8", "#253494", "#081d58"],
+                colorGrad = colors.length,
+                houses = ["Baratheon", "Greyjoy", "Lannister", "Martell", "Stark", "Targaryen", "Tyrell"],
+                episode = d3.range(1, 11);
+
+            var svg = d3.select("#chart")
+                        .append("svg")
+                        .attr("class", "mysvg")
+                        .attr("width", width + margin.left + margin.right)
+                        .attr("height", height + margin.top + margin.bottom)
+                        .append("g")
+                        .attr("transform", "translate(" + margin.left + ")");
+
+            var houseLabels = svg.selectAll(".houseLabel")
+                        .data(houses)
+                        .enter()
+                        .append("text")
+                        .text(function (d) { return d; })
+                        .attr("x", 0)
+                        .attr("y", function (d, i) { return margin.top + i * gridSize; })
+                        .style("text-anchor", "end")
+                        .attr("transform", "translate(-10," + gridSize / 1.75 + ")");
+
+            var episodeLabels = svg.selectAll(".episodeLabel")
+                        .data(episode)
+                        .enter()
+                        .append("text")
+                        .text(function(d) { return d; })
+                        .attr("x", function(d, i) { return i * gridSize; })
+                        .attr("y", margin.top + 7.5 * gridSize)
+                        .style("text-anchor", "middle")
+                        .attr("transform", "translate(" + gridSize / 2 + ", -5)");
+
+            var heatmap = function(alldata, season) {
+                var dataset = alldata.filter(function(d) {
+                                     return d.season == season; }),
+                    dataflat = [];
+
+                for (var i = 0; i < dataset.length; i++) {
+                    dataflat.push([dataset[i].Baratheon, dataset[i].episode, 1]);
+                    dataflat.push([dataset[i].Greyjoy, dataset[i].episode, 2]);
+                    dataflat.push([dataset[i].Lannister, dataset[i].episode, 3]);
+                    dataflat.push([dataset[i].Martell, dataset[i].episode, 4]);
+                    dataflat.push([dataset[i].Stark, dataset[i].episode, 5]);
+                    dataflat.push([dataset[i].Targaryen, dataset[i].episode, 6]);
+                    dataflat.push([dataset[i].Tyrell, dataset[i].episode, 7]);
+                }
+
+                var colorScale = d3.scale.quantile()
+                  .domain([0, colorGrad - 1, d3.max(dataflat, function (d) { return d[0]; })])
+                  .range(colors);
+
+                var cells = svg.selectAll(".episode")
+                               .data(dataflat);
+
+                cells.enter().append("rect")
+                     .attr("class", "border")
+                     .attr("x", function(d) { return (d[1] - 1) * gridSize; })
+                     .attr("y", function(d) { return margin.top + (d[2] - 1) * gridSize; })
+                     .attr("rx", 5)
+                     .attr("ry", 5)
+                     .attr("width", gridSize)
+                     .attr("height", gridSize)
+                     .style("fill", colors[0])
+                     .append("title")
+                         .text(function(d) { return d[0]; });;
+
+                cells.transition().duration(500)
+                     .style("fill", function(d) { return colorScale(d[0]); });
+
+                cells.exit().remove();
+
+                var legend = svg.selectAll(".legend")
+                                .data([0].concat(colorScale.quantiles()),
+                                                 function(d) { return d; });
+
+                legend.enter()
+                      .append("g")
+                      .attr("class", "legend");
+
+                legend.append("rect")
+                      .attr("x", function(d, i) { return i * gridSize; })
+                      .attr("y", margin.top + height)
+                      .attr("width", gridSize)
+                      .attr("height", gridSize / 4)
+                      .style("fill", function(d, i) { return colors[i]; });
+
+                legend.append("text")
+                      .attr("class", "legend")
+                      .text(function(d) { return Math.round(d); })
+                      .attr("x", function(d, i) { return gridSize * i; })
+                      .attr("y", margin.top + height - gridSize / 16);
+
+                legend.append("text")
+                      .attr("class", "legend")
+                      .text("Number of Appearances")
+                      .attr("x", 0)
+                      .attr("y", margin.top + height - gridSize / 2.5);
+
+                legend.exit().remove();
+
+                svg.append("text")
+                   .attr("class", "axislabel")
+                   .attr("x", 0)
+                   .attr("y", margin.top - 10)
+                   .attr("text-anchor", "end")  
+                   .text("House");
+                svg.append("text")
+                   .attr("class", "axislabel")
+                   .attr("x", width - margin.left)
+                   .attr("y", margin.top + 7.4 * gridSize)
+                   .attr("text-anchor", "middle")  
+                   .text("Episode");
+            };
+
+            d3.csv("heatmap.csv", 
+                function(d) {
+                    return { Baratheon:     +d.Baratheon,
+                             Greyjoy:       +d.Greyjoy,
+                             Lannister:     +d.Lannister,
+                             Martell:       +d.Martell,
+                             Stark:         +d.Stark,
+                             Targaryen:     +d.Targaryen,
+                             Tyrell:        +d.Tyrell,
+                             episode:       +d.episode,
+                             season:        +d.season,};
+                            },
+                function(error, rows) {
+                    heatmap(rows, 1);
+
+                    var data = d3.range(1, 7);
+                    var select = d3.select('#selectbox')
+                                   .append('select')
+                                   .attr('class', 'select')
+                                   .on('change', selectFunc);
+
+                    var choices = select.selectAll('choices')
+                                        .data(data)
+                                        .enter()
+                                        .append('option')
+                                        .text(function (d) { return d; });
+
+                    function selectFunc() {
+                        value = d3.select('select')
+                                  .property('value');
+                        heatmap(rows, value);
+                    };
+                });
+    </script>
+    </body>
+</html>

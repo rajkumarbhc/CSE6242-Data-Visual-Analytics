@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <script src="../lib/d3.v3.min.js"></script>
+        <script src="../lib/d3-queue.v3.min.js"></script>
+        <script src="../lib/topojson.v1.min.js"></script>
+        <script src="../lib/d3.tip.v0.6.3.js"></script>
+        <style>
+           .d3tooltip {
+                line-height: 1;
+                font-size: 12px;
+                font-weight: bold;
+                padding: 5px;
+                background: #252525;
+                color: #fff;
+                border-radius: 5px;
+            }
+
+            .states :hover {
+                fill: red;
+            }
+
+            .borders {
+                fill: none;
+                stroke: #fff;
+                stroke-width: 0.7px;
+                stroke-linejoin: round;
+                stroke-linecap: round;
+            }
+
+            .legend {
+                font-size: 14px;
+                font-weight: bold
+            }
+        </style>
+    </head>
+    <body>
+        <script type='text/javascript'>
+        var margin = { top: 40, right: 40, bottom: 20, left: 20 },
+            width = 1060 - margin.left - margin.right,
+            height = 620 - margin.top - margin.bottom;
+
+        var earnings = {}, ages = {},
+            path = d3.geo.path();
+
+        var svg = d3.select("body")
+                    .append("svg")
+                    .attr("width", width)
+                    .attr("height", height)
+                    .append("g")
+                    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+        var colorDomain = [10000].concat(d3.range(15000, 34000, 3000));
+        var color = d3.scale.threshold()
+            .domain(colorDomain)
+            .range(["#f7fbff","#deebf7","#c6dbef","#9ecae1","#6baed6","#4292c6","#2171b5","#084594"]);
+
+        d3.queue()
+            .defer(d3.json, "us.json")
+            .defer(d3.json, "median_earnings.json")
+            .defer(d3.csv, "median_ages.csv")
+            .await(ready);
+
+        function ready(error, usmap, mdearn, mdage) {
+            if (error) throw error;
+
+            mdearn.forEach(function(d) {
+                earnings[d.id] = +d.median_earnings; });
+
+            mdage.sort(function(x, y) {
+                return d3.ascending(x.median_age, y.median_age); })
+            mdage.forEach(function(d) {
+                ages[d.id] = []; });
+            mdage.forEach(function(d) {
+                ages[d.id].push([d.name, +d.median_age]); });
+
+            var tip = d3.tip()
+                        .attr('class', 'd3tooltip')
+                        .offset([50, 100])
+                        .html(function(d) {
+                            if (ages[d.id] == null) { 
+                                return "&nbsp &nbsp &nbsp &nbsp &nbsp &nbsp"; };
+                            var N = ages[d.id].length < 5? ages[d.id].length : 5;
+                            var res = "";
+                            for (var i = 0; i < N; i++) {
+                                line = "<strong>" + ages[d.id][i][0] + " (Age: " +
+                                        ages[d.id][i][1] + ")</strong>";
+                                res = res + line + "<br />"; };
+                            return res; });
+
+            svg.call(tip);
+
+            svg.append("g")
+                .attr("class", "states")
+                .selectAll("path")
+                .data(topojson.feature(usmap, usmap.objects.states).features)
+                .enter()
+                .append("path")
+                .attr("fill", function(d) { return color(earnings[d.id]); })
+                .attr("d", path)
+                .on("mouseover", tip.show)
+                .on("mouseout", tip.hide)
+
+            svg.append("path")
+               .attr("class", "borders")
+               .attr("d", path(topojson.mesh(usmap, usmap.objects.states,
+                                 function(x, y) { return x !== y; })));
+
+            svg.append("text")
+               .attr("x", width / 2)
+               .attr("y", margin.top / 20)
+               .attr("text-anchor", "middle")  
+               .style("font-size", "28px")
+               .style("font-weight", "bold")
+               .text("Median Earnings by State");
+        };
+
+        var w = 20, h = 20;
+        var legendLabels = colorDomain.map(function(d) { return "$" + d; });
+
+        var legend = svg.selectAll(".legend")
+                        .data(colorDomain)
+                        .enter()
+                        .append("g")
+                        .attr("class", "legend");
+
+        legend.append("rect")
+              .attr("x", 850)
+              .attr("y", function(d, i) { return height - (12-i)*h;})
+              .attr("width", w)
+              .attr("height", h)
+              .style("fill", function(d) { return color(d); })
+
+        legend.append("text")
+              .attr("x", 880)
+              .attr("y", function(d, i) { return height - (12-i)*h + 15;})
+              .text(function(d, i) { return legendLabels[i]; });
+        </script>
+    </body>
+</html>

@@ -1,0 +1,8 @@
+Average node degree: 2.166
+Average number of edges connected to a node
+
+Diameter of the graph: 6
+The largest value among the shortest paths between all pairs of nodes
+
+Average path length: 3.333
+Sum of the shortest paths between all pairs of nodes divided by the total number of pairs

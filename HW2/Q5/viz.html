@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <script src="../lib/d3.v3.min.js"></script>
+        <script src="../lib/d3.tip.v0.6.3.js"></script>
+        <script src="../lib/d3-queue.v3.min.js"></script>
+        <script src="../lib/sankey.js"></script>
+        <style>
+            .d3tooltip {
+                font-size: 14px;
+                padding: 5px;
+                background: #252525;
+                color: #fff;
+                border-radius: 5px; }
+
+            .node rect {
+                shape-rendering: crispEdges; }
+
+            .node text {
+                font-weight: bold;
+                font-size: 12px; }
+
+            .node:hover {
+                fill-opacity: 0.7; }
+
+            .link {
+                fill: none;
+                stroke: #000;
+                stroke-opacity: 0.2; }
+
+            .link:hover {
+                stroke-opacity: 0.5; }
+        </style>
+    </head>
+    <body>
+    <script>
+    /* This assignment is completed with using the following work as reference.
+       Sankey diagram from formatted JSON: http://bl.ocks.org/d3noob/c2637e28b79fb3bfea13
+       Sankey from csv with d3.js: http://bl.ocks.org/d3noob/c9b90689c1438f57d649
+    */
+        var margin = {top: 30, right: 30, bottom: 30, left: 30},
+            width = 1100 - margin.left - margin.right,
+            height = 560 - margin.top - margin.bottom;
+
+        var color = d3.scale.category20();
+
+        var svg = d3.select("body")
+                    .append("svg")
+                    .attr("width", width + margin.left + margin.right)
+                    .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+        var tipNode = d3.tip()
+                        .attr('class', 'd3tooltip')
+                        .offset([0, 75])
+                        .html(function(d) {
+                              return "<strong>" + d.header + " - " + 
+                                     d.value + " points" + "</strong>"; });
+        var tipLink = d3.tip()
+                        .attr('class', 'd3tooltip')
+                        .offset([50, 50])
+                        .html(function(d) {
+                              return "<strong>" + d.source.header + " - " + 
+                                     d.target.header + " - " + d.value + 
+                                     " points" + "</strong>"; });
+        svg.call(tipNode);
+        svg.call(tipLink);
+
+        d3.queue()
+          .defer(d3.csv, "races.csv")
+          .defer(d3.csv, "teams.csv")
+          .await(ready);
+
+        function ready(error, races, teams) {
+            if (error) throw error;
+
+            var sankeyNodes = [],
+                sankeyLinks = [];
+
+            races.forEach(function (d) {
+                sankeyNodes.push({ "header": d.race });
+                sankeyNodes.push({ "header": d.driver });
+                sankeyLinks.push({ "source": d.race,
+                                   "target": d.driver,
+                                   "value": +d.points }); });
+
+            teams.forEach(function (d) {
+                sankeyNodes.push({ "header": d.driver });
+                sankeyNodes.push({ "header": d.team });
+                sankeyLinks.push({ "source": d.driver,
+                                   "target": d.team,
+                                   "value": +d.points }); });
+
+            // Remove node duplicates
+            var temp = d3.nest()
+                         .key(function (d) { return d.header; })
+                         .entries(sankeyNodes);
+            sankeyNodes = [];
+            temp.forEach(function(d) {
+                         sankeyNodes.push(d.values[0].header); });
+
+            // Update sankeylinks
+            for (var i = 0; i < sankeyLinks.length; i++) {
+                sankeyLinks[i].source = sankeyNodes.indexOf(sankeyLinks[i].source);
+                sankeyLinks[i].target = sankeyNodes.indexOf(sankeyLinks[i].target); };
+
+            sankeyNodes.forEach(function (d, i) {
+                sankeyNodes[i] = { "header": d }; });
+
+            var sankey = d3.sankey()
+                           .nodeWidth(20)
+                           .nodePadding(10)
+                           .size([width, height]);
+
+            sankey.nodes(sankeyNodes)
+                  .links(sankeyLinks)
+                  .layout(36);
+
+            var node = svg.append("g").selectAll(".node")
+                          .data(sankeyNodes)
+                          .enter()
+                          .append("g")
+                          .attr("class", "node")
+                          .attr("transform", function(d) { 
+                                 return "translate(" + d.x + "," + d.y + ")"; })
+                          .on("mouseover", tipNode.show)
+                          .on("mouseout", tipNode.hide);
+
+            node.append("rect")
+                .attr("width", sankey.nodeWidth())
+                .attr("height", function(d) { return d.dy; })
+                .style("fill", function(d) { 
+                        var namestr = d.header.split(' ')[0];
+                        return d.fillcolor = color(namestr); })
+                .style("stroke", function(d) {
+                        return d3.rgb(d.fillcolor).darker(); })
+
+            node.append("text")
+                .attr("x", 5 + sankey.nodeWidth())
+                .attr("y", function(d) { return d.dy / 2; })
+                .attr("dy", ".32em")
+                .attr("text-anchor", "start")
+                .text(function(d) { return d.header; })
+                .filter(function(d) { return d.x >= width / 2; })
+                    .attr("x", -5)
+                    .attr("text-anchor", "end");
+
+            var path = sankey.link();
+
+            svg.append("g").selectAll(".link")
+               .data(sankeyLinks)
+               .enter()
+               .append("path")
+               .attr("class", "link")
+               .attr("d", path)
+               .style("stroke-width", function(d) { return d.dy > 2? d.dy : 2; })
+               .on("mouseover", tipLink.show)
+               .on("mouseout", tipLink.hide);
+}
+        </script>
+    </body>
+</html>
