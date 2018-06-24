@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset='utf-8'>
+        <script src='./lib/d3.v3.min.js'></script>
+        <script src='./lib/d3-queue.v3.min.js'></script>
+        <script src='./lib/topojson.v1.min.js'></script>
+        <script src='./lib/d3.tip.v0.6.3.js'></script>
+        <style>
+            .d3tooltip {
+                line-height: 1;
+                font-size: 14px;
+                font-weight: bold;
+                padding: 5px;
+                background: #252525;
+                color: #fff;
+                border-radius: 5px; }
+
+            .states :hover {
+                fill: red; }
+
+            .borders {
+                fill: none;
+                stroke: #fff;
+                stroke-width: 0.7px;
+                stroke-linejoin: round;
+                stroke-linecap: round; }
+
+            .legend {
+                font-size: 14px;
+                font-weight: bold; }
+
+            .svgPT {
+                background: #fff;
+                position: absolute;
+                top: 80px;
+                left: 3px; }
+
+            .svgSI {
+                background: #fff;
+                position: absolute;
+                top: 80px;
+                left: 640px; }
+
+            #title {
+                font-family: arial;
+                position: relative;
+                top: 5px;
+                left: 450px;
+                font-size: 22px;
+                font-weight: bold; }
+
+            #selectbox {
+                font-family: arial;
+                position: relative;
+                top: 18px;
+                left: 530px; }
+        </style>
+    </head>
+        <div id='title'>Top Concerned Diseases vs Sentiment Index</div>
+        <div id='selectbox'>Select Disease </div>
+        <div id='chart'></div>
+        <div id='chart1'></div>
+    <body>
+        <script type='text/javascript'>
+            var margin = { top: 10, right: 10, bottom: 10, left: 10 },
+                width = 635 - margin.left - margin.right,
+                height = 450 - margin.top - margin.bottom;
+
+            var svgPT = d3.select('#chart')
+                        .append('svg')
+                        .attr('class', 'svgPT')
+                        .attr('width', width + margin.left + margin.right)
+                        .attr('height', height + margin.top + margin.bottom)
+                        .append('g')
+                        .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
+
+            var svgSI = d3.select('#chart1')
+                        .append('svg')
+                        .attr('class', 'svgSI')
+                        .attr('width', width + margin.left + margin.right)
+                        .attr('height', height + margin.top + margin.bottom)
+                        .append('g')
+                        .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
+
+            var heatmap = function(svg, usmap, alldata, disease, key) {
+                var dataset = alldata.filter(function(d) {
+                                     return d.disease == disease; }),
+                    diseaseInfo = {},
+                    valList = [];
+
+                dataset.forEach(function(d) {
+                    if (key == 'percentage') {
+                        valList.push(+d.percentage);
+                        diseaseInfo[d.id] = [d.state, +d.percentage]; }
+                    else if (key == 'SI_index') {
+                        valList.push(+d.SI_index * (-1));
+                        diseaseInfo[d.id] = [d.state, +d.SI_index * (-1)]; };
+                    });
+
+                var colors = ['#deebf7','#c6dbef','#9ecae1','#6baed6','#4292c6','#2171b5','#084594'],
+                    minVal = d3.min(valList),
+                    maxVal = d3.max(valList),
+                    step = (maxVal - minVal) / colors.length;
+                var colorDomain = d3.range(minVal + step, maxVal, step).slice(0, colors.length-1);
+                var colorScale = d3.scale.threshold()
+                                   .domain(colorDomain)
+                                   .range(colors);
+
+                var tip = d3.tip()
+                            .attr('class', 'd3tooltip')
+                            .offset([120, 0])
+                            .html(function(d) {
+                                    if (diseaseInfo[d.id] == null) {
+                                        return '&nbsp &nbsp &nbsp'; };
+                                    line1 = '<strong>' + diseaseInfo[d.id][0] + '</strong>' + '<br />';
+                                    if (key == 'percentage') {
+                                        line2 = '<strong>' + disease + ': ' + diseaseInfo[d.id][1].toFixed(2);
+                                        return line1 + line2 + '%</strong>'; }
+                                    else if (key == 'SI_index') {
+                                        line2 = '<strong>' + disease + ': '
+                                                + (diseaseInfo[d.id][1] * (-1)).toFixed(2);
+                                        return line1 + line2 + '</strong>'; };
+                                 });
+                svg.call(tip);
+
+                var projection = d3.geo.albersUsa()
+                                   .scale(750)
+                                   .translate([width / 2, height / 2]);
+                var mappath = d3.geo.path()
+                                .projection(projection);
+
+                svg.append('g')
+                   .attr('class', 'states')
+                   .selectAll('path')
+                   .data(topojson.feature(usmap, usmap.objects.states).features)
+                   .enter()
+                   .append('path')
+                   .attr('fill', function(d) {
+                                if (diseaseInfo[d.id] == null) {
+                                    return '#fff'; };
+                                return colorScale(diseaseInfo[d.id][1]);
+                                })
+                   .attr('d', mappath)
+                   .on('mouseover', tip.show)
+                   .on('mouseout', tip.hide);
+
+                svg.append('path')
+                   .attr('class', 'borders')
+                   .attr('d', mappath(topojson.mesh(usmap, usmap.objects.states,
+                                 function(x, y) { return x !== y; })));
+
+                // Add Legend
+                var w = 20, h = 15;
+
+                var colorDomain_adj = [minVal].concat(colorDomain);
+
+                if (key == 'percentage') {
+                    var legendLabels = colorDomain_adj.map(function(d, i) {
+                                           return d.toFixed(1) + '%'; });
+                    }
+                else if (key == 'SI_index') {
+                    var legendLabels = colorDomain_adj.map(function(d, i) {
+                                           return Math.round(d * 10) / 10; });
+                    };
+
+                var legend = svg.selectAll('.legend')
+                                .data(colorDomain_adj);
+
+                legend.enter()
+                      .append('g')
+                      .attr('class', 'legend');
+
+                legend.append('rect')
+                      .attr('x', 530)
+                      .attr('y', function(d, i) { return height - (8-i)*h;})
+                      .attr('width', w)
+                      .attr('height', h)
+                      .style('fill', function(d, i) { return i? colorScale(d) : colorScale(d-1); })
+
+                legend.append('text')
+                      .attr('x', 555)
+                      .attr('y', function(d, i) { return height - (8-i)*h + 12;})
+                      .attr('text-anchor', 'begin')
+                      .text(function(d, i) {
+                        if (key == 'percentage') { return legendLabels[i]; }
+                        else if (key == 'SI_index') {return (legendLabels[i] * (-1)).toFixed(1);};
+                       });
+
+                //Add title for graph
+                if (key == 'percentage') { var svgTitle = 'The Degree of Concern accross States'}
+                else if (key == 'SI_index') { var svgTitle = 'Sentiment Index accross States'};
+
+                svg.append('text')
+                   .attr('x', (width / 2) - 10)
+                   .attr('y', margin.top * 2)
+                   .attr('text-anchor', 'middle')
+                   .style('font-size', '20px')
+                   .style('font-weight', 'bold')
+                   .text(svgTitle);
+            };
+
+            d3.queue()
+                .defer(d3.json, 'us.json')
+                .defer(d3.csv, 'results_top_10.csv')
+                .await(ready);
+
+            function ready(error, usmap, alldata) {
+                if (error) throw error;
+
+                heatmap(svgPT, usmap, alldata, 'cancer', 'percentage');
+                heatmap(svgSI, usmap, alldata, 'cancer', 'SI_index');
+
+                var topDiseases = ['cancer', 'depression', 'anxiety', 'diabetes', 'flu',
+                                   'burns', 'fever', 'headache', 'autism', 'acne'];
+
+                var select = d3.select('#selectbox')
+                               .append('select')
+                               .attr('class', 'select')
+                               .on('change', selectFunc);
+
+                var choices = select.selectAll('choices')
+                                    .data(topDiseases)
+                                    .enter()
+                                    .append('option')
+                                    .text(function (d) { return d; });
+
+                function selectFunc() {
+                    d3.selectAll('path').remove();
+                    d3.selectAll('.legend').remove();
+                    value = d3.select('select')
+                              .property('value');
+                    heatmap(svgPT, usmap, alldata, value, 'percentage');
+                    heatmap(svgSI, usmap, alldata, value, 'SI_index'); };
+            };
+    </script>
+    </body>
+</html>
