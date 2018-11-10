@@ -75,7 +75,7 @@
     </dependency>
     <dependency>
       <groupId>org.apache.spark</groupId>
-      <artifactId>spark-core_2.10</artifactId>
+      <artifactId>spark-core_2.2.0</artifactId>
       <version>1.6.0-cdh5.12.1</version>
     </dependency>
 		<dependency>
